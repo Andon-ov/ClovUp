@@ -1,0 +1,14 @@
+-r base.txt
+
+# Development tools
+django-debug-toolbar>=4.2,<5.0
+django-extensions>=3.2,<4.0
+ipython>=8.0
+pytest>=7.4,<9.0
+pytest-django>=4.5,<5.0
+pytest-cov>=4.1,<6.0
+factory-boy>=3.3,<4.0
+faker>=20.0
+flake8>=6.0,<8.0
+black>=23.0
+isort>=5.12

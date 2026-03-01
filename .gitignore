@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+.eggs/
+
+# Django
+*.log
+db.sqlite3
+staticfiles/
+mediafiles/
+.env
+
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.sass-cache/
+npm-debug.log*
+
+# Docker
+*.env
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+htmlcov/
+.coverage
+.pytest_cache/
+.mypy_cache/
