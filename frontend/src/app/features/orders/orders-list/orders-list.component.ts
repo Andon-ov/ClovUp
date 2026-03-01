@@ -8,10 +8,9 @@ import { TagModule } from 'primeng/tag';
 import { DropdownModule } from 'primeng/dropdown';
 import { CalendarModule } from 'primeng/calendar';
 import { DialogModule } from 'primeng/dialog';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ToolbarModule } from 'primeng/toolbar';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { MessageService } from 'primeng/api';
 import { OrdersService } from '@core/services/orders.service';
 import { Order, OrderStatus } from '@core/models/order.model';
 
@@ -21,12 +20,11 @@ import { Order, OrderStatus } from '@core/models/order.model';
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule,
     TagModule, DropdownModule, CalendarModule, DialogModule,
-    ConfirmDialogModule, ToastModule, ToolbarModule,
+    ToastModule, ToolbarModule,
   ],
-  providers: [ConfirmationService, MessageService],
+  providers: [MessageService],
   template: `
     <p-toast></p-toast>
-    <p-confirmDialog></p-confirmDialog>
 
     <div class="orders-page">
       <p-toolbar styleClass="mb-3">
@@ -116,6 +114,35 @@ import { Order, OrderStatus } from '@core/models/order.model';
       </p-table>
     </div>
 
+    <!-- Void reason dialog -->
+    <p-dialog
+      [(visible)]="voidDialogVisible"
+      header="Анулиране на поръчка"
+      [modal]="true"
+      [style]="{ width: '420px' }"
+    >
+      @if (voidTarget) {
+        <div class="flex flex-column gap-3">
+          <div>Поръчка: <strong>{{ voidTarget.order_number }}</strong></div>
+          <div>
+            <label class="block mb-1">Причина за анулиране *</label>
+            <p-dropdown
+              [options]="voidReasonOptions"
+              [(ngModel)]="voidReason"
+              placeholder="Изберете причина..."
+              styleClass="w-full"
+            ></p-dropdown>
+          </div>
+        </div>
+      }
+      <ng-template pTemplate="footer">
+        <p-button label="Отказ" [text]="true" (onClick)="voidDialogVisible = false"></p-button>
+        <p-button label="Анулирай" severity="danger" icon="pi pi-ban"
+          [disabled]="!voidReason.trim()"
+          (onClick)="submitVoid()"></p-button>
+      </ng-template>
+    </p-dialog>
+
     <!-- Order detail dialog -->
     <p-dialog
       [(visible)]="detailVisible"
@@ -158,6 +185,14 @@ export class OrdersListComponent implements OnInit {
   dateTo: Date | null = null;
   detailVisible = false;
   selectedOrder: Order | null = null;
+  voidDialogVisible = false;
+  voidTarget: Order | null = null;
+  voidReason = '';
+  voidReasonOptions = [
+    'Връщане на стока и рекламация',
+    'Операторска грешка',
+    'Намаляване на данъчната основа',
+  ];
 
   statusOptions = [
     { label: 'Отворена', value: 'OPEN' },
@@ -167,7 +202,6 @@ export class OrdersListComponent implements OnInit {
 
   constructor(
     private ordersService: OrdersService,
-    private confirmationService: ConfirmationService,
     private messageService: MessageService,
   ) {}
 
@@ -195,22 +229,21 @@ export class OrdersListComponent implements OnInit {
   }
 
   confirmVoid(order: Order): void {
-    this.confirmationService.confirm({
-      message: `Анулиране на поръчка ${order.order_number}?`,
-      header: 'Потвърждение',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Да, анулирай',
-      rejectLabel: 'Не',
-      accept: () => {
-        this.ordersService.voidOrder(order.id, 'Анулирана от бекофис').subscribe({
-          next: () => {
-            this.messageService.add({ severity: 'success', summary: 'Анулирана', detail: `Поръчка ${order.order_number} е анулирана.` });
-            this.loadOrders();
-          },
-          error: () => {
-            this.messageService.add({ severity: 'error', summary: 'Грешка', detail: 'Неуспешно анулиране.' });
-          },
-        });
+    this.voidTarget = order;
+    this.voidReason = '';
+    this.voidDialogVisible = true;
+  }
+
+  submitVoid(): void {
+    if (!this.voidTarget || !this.voidReason.trim()) return;
+    this.ordersService.voidOrder(this.voidTarget.id, this.voidReason.trim()).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Анулирана', detail: `Поръчка ${this.voidTarget!.order_number} е анулирана.` });
+        this.voidDialogVisible = false;
+        this.loadOrders();
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Грешка', detail: 'Неуспешно анулиране.' });
       },
     });
   }

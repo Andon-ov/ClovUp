@@ -26,7 +26,7 @@ export class OrdersService {
   }
 
   voidOrder(id: number, reason: string): Observable<Order> {
-    return this.http.post<Order>(`${this.url}/orders/${id}/void/`, { reason });
+    return this.http.post<Order>(`${this.url}/orders/${id}/void/`, { void_reason: reason });
   }
 
   // ── Shifts ──
