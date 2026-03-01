@@ -909,8 +909,110 @@ curl -X POST http://localhost:8000/api/orders/orders/ \
 
 ---
 
+## Правилно стартиране на проекта
+
+### Стъпка 1 — Стартиране на Docker услуги
+
+> **Важно:** Системата използва Docker Compose v1. Използвайте `docker-compose` (с тире), не `docker compose`.
+
+```bash
+docker-compose up -d
+```
+
+Изчакайте всички контейнери да стартират успешно:
+
+```bash
+docker-compose ps
+```
+
+Очакван резултат — всички услуги трябва да са в статус `Up`:
+
+| Контейнер | Статус | Порт |
+|-----------|--------|------|
+| `clovup_db_1` | Up (healthy) | 5432 |
+| `clovup_redis_1` | Up (healthy) | 6379 |
+| `clovup_backend_1` | Up | 8000 |
+| `clovup_daphne_1` | Up | 8002 |
+| `clovup_celery_1` | Up | — |
+| `clovup_celery-beat_1` | Up | — |
+| `clovup_frontend_1` | Up | 4200 |
+
+### Стъпка 2 — Миграции (само при първо стартиране)
+
+```bash
+docker-compose exec backend python manage.py migrate
+```
+
+### Стъпка 3 — Създаване на администратор (само при първо стартиране)
+
+```bash
+docker-compose exec backend python manage.py createsuperuser
+```
+
+### Стъпка 4 — Достъп до приложението
+
+| Сервис | URL | Описание |
+|--------|-----|----------|
+| **Приложение (Angular)** | http://localhost:4200 | Основен интерфейс — вход тук |
+| **Django Admin** | http://localhost:8000/admin/ | Административен панел |
+| **REST API** | http://localhost:8000/api/v1/ | Backend API |
+| **WebSocket** | ws://localhost:8002 | Real-time нотификации (Daphne) |
+
+> **Забележка:** http://localhost:8000/ не е валиден адрес — Django backend-ът е само API сървър и не обслужва root URL. Приложението се отваря от **http://localhost:4200**.
+
+### Диагностика при проблеми
+
+```bash
+# Проверка на статуса на контейнерите
+docker-compose ps
+
+# Логове на конкретен сервиз
+docker-compose logs --tail=50 backend
+docker-compose logs --tail=50 daphne
+docker-compose logs --tail=50 frontend
+
+# Рестартиране на конкретен сервиз
+docker-compose restart daphne
+
+# Пълно рестартиране
+docker-compose down && docker-compose up -d
+```
+
+Готово. Логни се на http://localhost:4200 с:
+
+Username: test
+Password: test
+
+---
+
 ## Лиценз
 
 Copyright (c) 2026 Andon-ov. Всички права запазени.
 
 Proprietary software. Неоторизираното копиране, разпространение или модификация е забранено.
+
+
+.env
+
+# --- Django Settings ---
+SECRET_KEY=insecure-dev-key-12345
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# --- Database (PostgreSQL) ---
+POSTGRES_DB=clovup
+POSTGRES_USER=clovup
+POSTGRES_PASSWORD=clovup_pass
+DATABASE_URL=postgres://clovup:clovup_pass@db:5432/clovup
+
+# --- Redis & Celery ---
+REDIS_URL=redis://redis:6379/0
+CELERY_BROKER_URL=redis://redis:6379/1
+
+# --- Security & JWT ---
+CORS_ALLOWED_ORIGINS=http://localhost:4200
+JWT_ACCESS_LIFETIME=60
+JWT_REFRESH_LIFETIME=7
+
+# --- Device Agent ---
+DEVICE_AGENT_URL=http://localhost:8001

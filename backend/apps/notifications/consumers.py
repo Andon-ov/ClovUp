@@ -7,13 +7,13 @@ import json
 import logging
 
 from channels.db import database_sync_to_async
-from channels.generic.websocket import AsyncJsonWebSocketConsumer
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from rest_framework_simplejwt.tokens import AccessToken
 
 logger = logging.getLogger(__name__)
 
 
-class DashboardConsumer(AsyncJsonWebSocketConsumer):
+class DashboardConsumer(AsyncJsonWebsocketConsumer):
     """
     Real-time dashboard consumer.
     Broadcasts: new orders, order updates, alerts, device status changes.

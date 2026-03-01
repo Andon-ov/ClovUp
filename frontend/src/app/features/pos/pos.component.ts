@@ -181,7 +181,7 @@ interface CartItem {
         @if (selectedPayment() === 'CASH') {
           <div class="cash-section">
             <label>Получена сума:</label>
-            <p-inputNumber [(ngModel)]="cashReceived" [min]="0" mode="decimal"
+            <p-inputNumber [ngModel]="cashReceived()" (ngModelChange)="cashReceived.set($event)" [min]="0" mode="decimal"
                            [minFractionDigits]="2" [maxFractionDigits]="2" inputStyleClass="w-full text-2xl text-center"></p-inputNumber>
             <div class="change-display" [class.negative]="changeAmount() < 0">
               <span>Ресто:</span>
@@ -189,7 +189,7 @@ interface CartItem {
             </div>
             <div class="quick-cash">
               @for (q of quickCashAmounts(); track q) {
-                <button class="quick-cash-btn" (click)="cashReceived = q">{{ q | number:'1.2-2' }}</button>
+                <button class="quick-cash-btn" (click)="cashReceived.set(q)">{{ q | number:'1.2-2' }}</button>
               }
             </div>
           </div>
@@ -388,7 +388,7 @@ export class PosComponent implements OnInit {
   showSafeOutDialog = false;
 
   selectedPayment = signal<string>('CASH');
-  cashReceived = 0;
+  cashReceived = signal(0);
   discountPercent = 0;
   safeAmount = 0;
   safeNotes = '';
@@ -411,7 +411,7 @@ export class PosComponent implements OnInit {
 
   grandTotal = computed(() => this.subtotal() - this.totalDiscount());
 
-  changeAmount = computed(() => this.cashReceived - this.grandTotal());
+  changeAmount = computed(() => this.cashReceived() - this.grandTotal());
 
   quickCashAmounts = computed(() => {
     const total = this.grandTotal();
@@ -427,7 +427,7 @@ export class PosComponent implements OnInit {
   canPay = computed(() => {
     if (this.cart().length === 0) return false;
     if (this.selectedPayment() === 'CASH') {
-      return this.cashReceived >= this.grandTotal();
+      return this.cashReceived() >= this.grandTotal();
     }
     return true;
   });
@@ -538,7 +538,7 @@ export class PosComponent implements OnInit {
   }
 
   openPaymentDialog(): void {
-    this.cashReceived = 0;
+    this.cashReceived.set(0);
     this.selectedPayment.set('CASH');
     this.showPaymentDialog = true;
   }

@@ -40,7 +40,7 @@ class OrderItemCreateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = serializers.DecimalField(max_digits=10, decimal_places=3)
     discount_pct = serializers.FloatField(default=0)
-    notes = serializers.CharField(required=False, default='')
+    notes = serializers.CharField(required=False, default='', allow_blank=True)
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -65,7 +65,7 @@ class PaymentCreateSerializer(serializers.Serializer):
         max_digits=10, decimal_places=2, default=0
     )
     client_account_id = serializers.IntegerField(required=False, default=None)
-    additional_info = serializers.CharField(required=False, default='')
+    additional_info = serializers.CharField(required=False, default='', allow_blank=True)
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -99,10 +99,10 @@ class OrderCreateSerializer(serializers.Serializer):
     order_type = serializers.ChoiceField(
         choices=['DINE_IN', 'TAKEAWAY', 'DELIVERY', 'RETAIL']
     )
-    table_number = serializers.CharField(required=False, default=None)
-    shift_id = serializers.IntegerField(required=False, default=None)
-    client_account_id = serializers.IntegerField(required=False, default=None)
-    notes = serializers.CharField(required=False, default='')
+    table_number = serializers.CharField(required=False, default=None, allow_blank=True, allow_null=True)
+    shift_id = serializers.IntegerField(required=False, default=None, allow_null=True)
+    client_account_id = serializers.IntegerField(required=False, default=None, allow_null=True)
+    notes = serializers.CharField(required=False, default='', allow_blank=True)
     items = OrderItemCreateSerializer(many=True)
 
 

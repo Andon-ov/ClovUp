@@ -62,7 +62,7 @@ export class PosService {
   }
 
   addPayment(orderId: number, data: AddPaymentRequest): Observable<any> {
-    return this.http.post<any>(`${this.api}/orders/orders/${orderId}/add_payment/`, data);
+    return this.http.post<any>(`${this.api}/orders/orders/${orderId}/payments/`, data);
   }
 
   // ── Fiscal ──

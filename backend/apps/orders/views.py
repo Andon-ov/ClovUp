@@ -65,8 +65,19 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated | IsDeviceAuthenticated]
 
+    def _get_tenant(self):
+        """Resolve tenant from request — works for both Device-Token and JWT auth."""
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant and hasattr(self.request, 'user') and self.request.user.is_authenticated:
+            try:
+                tenant = self.request.user.tenantuser.tenant
+                self.request.tenant = tenant
+            except Exception:
+                pass
+        return tenant
+
     def get_queryset(self):
-        tenant = self.request.tenant
+        tenant = self._get_tenant()
         if not tenant:
             return Order.objects.none()
         return Order.objects.for_tenant(tenant).select_related(
@@ -75,7 +86,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """
-        POST /orders/ — Device-Token auth.
+        POST /orders/ — Device-Token auth or JWT auth.
         Idempotent: get_or_create on UUID.
         """
         serializer = OrderCreateSerializer(data=request.data)
@@ -83,7 +94,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
 
         device = getattr(request, 'device', None)
-        tenant = request.tenant
+        tenant = self._get_tenant()
+
+        if not tenant:
+            return Response(
+                {'error': 'Could not determine tenant for this user.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Idempotent check
         existing = Order.objects.filter(uuid=data['uuid']).first()

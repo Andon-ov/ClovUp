@@ -7,14 +7,21 @@ from rest_framework.permissions import BasePermission
 class IsTenantMember(BasePermission):
     """
     Allow access only to authenticated users who belong to a tenant.
+    Also sets request.tenant so views can use it (TenantMiddleware runs before
+    DRF auth, so request.user is still AnonymousUser at middleware time).
     """
     def has_permission(self, request, view):
-        return bool(
+        if not (
             request.user
             and request.user.is_authenticated
             and hasattr(request.user, 'tenantuser')
             and request.user.tenantuser.is_active
-        )
+        ):
+            return False
+        # Set request.tenant here — middleware cannot do it reliably with JWT
+        if not getattr(request, 'tenant', None):
+            request.tenant = request.user.tenantuser.tenant
+        return True
 
 
 class IsDeviceAuthenticated(BasePermission):

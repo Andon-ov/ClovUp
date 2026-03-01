@@ -1,5 +1,19 @@
 /* ClovUp global styles */
 
+/* Override PrimeNG lara-light-blue @font-face so Inter font loads from correct path */
+@font-face {
+  font-family: "Inter var";
+  font-weight: 100 900;
+  font-style: normal;
+  src: url('/media/Inter-roman.var.woff2?v=3.19') format('woff2');
+}
+@font-face {
+  font-family: "Inter var";
+  font-weight: 100 900;
+  font-style: italic;
+  src: url('/media/Inter-italic.var.woff2?v=3.19') format('woff2');
+}
+
 :root {
   --primary-color: #3B82F6;
   --primary-dark: #2563EB;

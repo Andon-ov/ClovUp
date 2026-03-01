@@ -96,7 +96,8 @@ class Order(TimestampedModel):
         'tenants.Tenant', on_delete=models.CASCADE, related_name='orders'
     )
     location = models.ForeignKey(
-        'tenants.Location', on_delete=models.CASCADE, related_name='orders'
+        'tenants.Location', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='orders'
     )
     device = models.ForeignKey(
         'tenants.POSDevice', null=True, on_delete=models.SET_NULL,

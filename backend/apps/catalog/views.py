@@ -23,6 +23,7 @@ from .serializers import (
 class ProductCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = ProductCategorySerializer
     permission_classes = [IsAuthenticated, IsTenantMember]
+    pagination_class = None  # Categories are few — no need for pagination
 
     def get_queryset(self):
         return ProductCategory.objects.for_tenant(
