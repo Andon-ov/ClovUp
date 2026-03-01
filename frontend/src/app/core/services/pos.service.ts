@@ -6,7 +6,6 @@ import { Order, Shift } from '../models/order.model';
 
 export interface CreateOrderRequest {
   uuid: string;
-  receipt_sequence: number;
   order_type: string;
   table_number?: string;
   items: CreateOrderItemRequest[];

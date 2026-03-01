@@ -6,6 +6,7 @@ Orders models — Shift, CashOperation, Order, OrderItem, Payment,
 import uuid
 
 from django.db import models
+from django.db.models import Q
 
 from core.managers import TenantManager
 from core.models import TimestampedModel
@@ -148,6 +149,21 @@ class Order(TimestampedModel):
             models.Index(fields=['device', 'receipt_sequence']),
         ]
         unique_together = [('device', 'receipt_sequence')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'receipt_sequence'],
+                condition=Q(device__isnull=True),
+                name='unique_web_order_sequence_per_tenant',
+            ),
+        ]
+        constraints = [
+            # Web-origin orders (no device) must have unique sequence per tenant
+            models.UniqueConstraint(
+                fields=['tenant', 'receipt_sequence'],
+                condition=Q(device__isnull=True),
+                name='unique_web_order_sequence_per_tenant',
+            ),
+        ]
 
     def __str__(self):
         return f'Order {self.order_number} ({self.status})'

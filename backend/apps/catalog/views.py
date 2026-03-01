@@ -10,6 +10,7 @@ from core.permissions import IsTenantMember
 
 from .filters import ProductFilter
 from .models import PriceList, PriceListItem, Product, ProductCategory, ProductLimit
+from .off_client import fetch_product_data
 from .serializers import (
     PriceListItemSerializer,
     PriceListSerializer,
@@ -72,6 +73,42 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         serializer = ProductSearchSerializer(queryset[:20], many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='barcode-lookup')
+    def barcode_lookup(self, request):
+        """
+        GET /catalog/products/barcode-lookup/?barcode=3800042403167
+
+        1. First checks if the barcode already exists in this tenant's catalog.
+        2. If not found locally, queries Open Food Facts API.
+        Returns a pre-filled product dict — the user must confirm and set price.
+        """
+        barcode = request.query_params.get('barcode', '').strip()
+        if not barcode:
+            return Response(
+                {'error': 'barcode query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 1. Local catalog check
+        local = Product.objects.for_tenant(request.tenant).filter(
+            barcode=barcode, is_deleted=False
+        ).first()
+        if local:
+            return Response({
+                'source': 'local',
+                'product': ProductSearchSerializer(local).data,
+            })
+
+        # 2. Open Food Facts lookup
+        data = fetch_product_data(barcode)
+        if data:
+            return Response({'source': 'openfoodfacts', 'product': data})
+
+        return Response(
+            {'error': 'Продуктът не е намерен в локалния каталог или Open Food Facts.'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
 
 class PriceListViewSet(viewsets.ModelViewSet):

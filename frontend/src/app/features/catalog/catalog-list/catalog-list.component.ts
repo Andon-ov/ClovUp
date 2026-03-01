@@ -12,6 +12,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ToolbarModule } from 'primeng/toolbar';
 import { TabViewModule } from 'primeng/tabview';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CatalogService } from '@core/services/catalog.service';
 import { Product, ProductCategory } from '@core/models/product.model';
@@ -23,6 +25,7 @@ import { Product, ProductCategory } from '@core/models/product.model';
     CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule,
     DialogModule, DropdownModule, InputNumberModule, TagModule,
     ConfirmDialogModule, ToastModule, ToolbarModule, TabViewModule,
+    ProgressSpinnerModule, TooltipModule,
   ],
   providers: [ConfirmationService, MessageService],
   template: `
@@ -185,13 +188,56 @@ import { Product, ProductCategory } from '@core/models/product.model';
         <div class="flex gap-3">
           <div class="field flex-1">
             <label for="barcode">Баркод</label>
-            <input pInputText id="barcode" [(ngModel)]="form.barcode" />
+            <div class="flex gap-2">
+              <input pInputText id="barcode" [(ngModel)]="form.barcode" class="flex-1"
+                (keyup.enter)="lookupBarcode()" />
+              <p-button
+                icon="pi pi-search"
+                [loading]="offLoading"
+                (onClick)="lookupBarcode()"
+                [disabled]="!form.barcode"
+                pTooltip="Търси в Open Food Facts"
+                severity="secondary"
+                [text]="true"
+                tooltipPosition="top"
+              ></p-button>
+            </div>
           </div>
           <div class="field flex-1">
             <label for="sku">SKU</label>
             <input pInputText id="sku" [(ngModel)]="form.sku" />
           </div>
         </div>
+
+        <!-- OFF lookup result banner -->
+        @if (offResult) {
+          <div class="off-result border-round p-3 flex gap-3 align-items-start"
+            [class.off-result-local]="offResult.source === 'local'"
+            [class.off-result-off]="offResult.source === 'openfoodfacts'">
+            @if (offResult.product.image_url) {
+              <img [src]="offResult.product.image_url" alt=""
+                style="width:64px;height:64px;object-fit:contain;border-radius:6px;background:#f5f5f5">
+            }
+            <div class="flex flex-column gap-1 flex-1">
+              <div class="font-semibold">{{ offResult.product.name }}</div>
+              @if (offResult.product.description) {
+                <div class="text-sm text-color-secondary">{{ offResult.product.description }}</div>
+              }
+              @if (offResult.product.category_hint) {
+                <div class="text-sm">Категория (подсказ): <em>{{ offResult.product.category_hint }}</em></div>
+              }
+              @if (offResult.source === 'openfoodfacts') {
+                <div class="text-xs text-orange-500">ℹ️ ДДС група е зададена Б (стандартна 20%) — верифицирай преди записване.</div>
+              }
+              <div class="flex gap-2 mt-1">
+                <p-button label="Приложи данните" size="small" icon="pi pi-check"
+                  (onClick)="applyOffResult()" [text]="true" severity="success"></p-button>
+                <p-button label="Игнорирай" size="small" icon="pi pi-times"
+                  (onClick)="offResult = null" [text]="true" severity="secondary"></p-button>
+              </div>
+            </div>
+          </div>
+        }
         <div class="flex gap-3">
           <div class="field flex-1">
             <label for="price">Цена *</label>
@@ -285,6 +331,14 @@ import { Product, ProductCategory } from '@core/models/product.model';
   `,
   styles: [`
     .catalog-page { h2 { margin: 0; font-weight: 600; } }
+    .off-result {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+    }
+    .off-result-local {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
   `],
 })
 export class CatalogListComponent implements OnInit {
@@ -297,6 +351,9 @@ export class CatalogListComponent implements OnInit {
   dialogVisible = false;
   editMode = false;
   form: any = {};
+  // Open Food Facts lookup
+  offLoading = false;
+  offResult: { source: string; product: any } | null = null;
 
   // Categories dialog
   categoryDialogVisible = false;
@@ -377,19 +434,53 @@ export class CatalogListComponent implements OnInit {
 
   openNew(): void {
     this.form = { name: '', barcode: '', sku: '', price: 0, cost_price: null, category: null, vat_group: 'Б', unit: 'PCS', max_discount_pct: 0 };
+    this.offResult = null;
     this.editMode = false;
     this.dialogVisible = true;
   }
 
   editProduct(product: Product): void {
     this.form = { ...product };
+    this.offResult = null;
     this.editMode = true;
     this.dialogVisible = true;
   }
 
-  saveProduct(): void {
-    if (!this.form.name) {
-      this.messageService.add({ severity: 'warn', summary: 'Внимание', detail: 'Моля, въведете име.' });
+  lookupBarcode(): void {
+    const barcode = (this.form.barcode || '').trim();
+    if (!barcode) return;
+    this.offLoading = true;
+    this.offResult = null;
+    this.catalogService.barcodeLookup(barcode).subscribe({
+      next: (res) => {
+        this.offResult = res;
+        this.offLoading = false;
+        if (res.source === 'local') {
+          this.messageService.add({ severity: 'info', summary: 'Намерен локално', detail: 'Баркодът вече съществува в каталога.' });
+        } else {
+          this.messageService.add({ severity: 'success', summary: 'Open Food Facts', detail: `Намерен: ${res.product.name}` });
+        }
+      },
+      error: (err) => {
+        this.offLoading = false;
+        const msg = err.error?.error || 'Не е намерен в Open Food Facts.';
+        this.messageService.add({ severity: 'warn', summary: 'Не е намерен', detail: msg });
+      },
+    });
+  }
+
+  applyOffResult(): void {
+    if (!this.offResult) return;
+    const p = this.offResult.product;
+    // Only fill fields the user hasn't manually set
+    if (!this.form.name) this.form.name = p.name || '';
+    if (p.vat_group) this.form.vat_group = p.vat_group;
+    if (p.unit) this.form.unit = p.unit;
+    this.offResult = null;
+    this.messageService.add({ severity: 'info', summary: 'Приложено', detail: 'Полета са попълнени от Open Food Facts. Не забравейте да зададете цена и ДДС група.' });
+  }
+
+  saveProduct(): void {    if (!this.form.name) {      this.messageService.add({ severity: 'warn', summary: 'Внимание', detail: 'Моля, въведете име.' });
       return;
     }
 

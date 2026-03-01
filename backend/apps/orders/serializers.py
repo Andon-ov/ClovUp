@@ -93,9 +93,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateSerializer(serializers.Serializer):
-    """Used by Device-Token auth to create an order."""
+    """Used by Device-Token auth or JWT auth to create an order."""
     uuid = serializers.UUIDField()
-    receipt_sequence = serializers.IntegerField()
+    receipt_sequence = serializers.IntegerField(required=False, default=None, allow_null=True)
     order_type = serializers.ChoiceField(
         choices=['DINE_IN', 'TAKEAWAY', 'DELIVERY', 'RETAIL']
     )

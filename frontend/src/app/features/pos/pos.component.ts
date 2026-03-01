@@ -393,8 +393,6 @@ export class PosComponent implements OnInit {
   safeAmount = 0;
   safeNotes = '';
 
-  private receiptSeq = 1;
-
   subtotal = computed(() => {
     return this.cart().reduce((sum, item) => {
       const base = item.product.price * item.quantity;
@@ -555,7 +553,6 @@ export class PosComponent implements OnInit {
 
     this.posService.createOrder({
       uuid: orderUuid,
-      receipt_sequence: this.receiptSeq++,
       order_type: this.orderType(),
       items,
     }).subscribe({

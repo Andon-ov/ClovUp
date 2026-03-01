@@ -4,6 +4,7 @@ Orders views.
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Max
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
@@ -111,8 +112,22 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
 
         with transaction.atomic():
-            # Build order_number
-            order_number = f"{device.logical_name}-{data['receipt_sequence']:07d}" if device else f"WEB-{data['receipt_sequence']:07d}"
+            # Auto-generate receipt_sequence for web orders (no device)
+            # For device orders the device sends its own hardware sequence
+            if device:
+                seq = data['receipt_sequence']
+                prefix = device.logical_name
+            else:
+                # Lock tenant's web orders to get next sequence atomically
+                last_seq = (
+                    Order.objects.select_for_update()
+                    .filter(tenant=tenant, device__isnull=True)
+                    .aggregate(max=Max('receipt_sequence'))['max']
+                ) or 0
+                seq = last_seq + 1
+                prefix = 'WEB'
+
+            order_number = f"{prefix}-{seq:07d}"
 
             # Resolve cashier
             cashier = None
@@ -124,7 +139,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
             order = Order.objects.create(
                 uuid=data['uuid'],
-                receipt_sequence=data['receipt_sequence'],
+                receipt_sequence=seq,
                 order_number=order_number,
                 tenant=tenant,
                 location=device.location if device else tenant.locations.first(),

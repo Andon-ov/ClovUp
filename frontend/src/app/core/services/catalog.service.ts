@@ -61,6 +61,16 @@ export class CatalogService {
     });
   }
 
+  /** GET /catalog/products/barcode-lookup/?barcode=...
+   *  Returns { source: 'local'|'openfoodfacts', product: {...} }
+   */
+  barcodeLookup(barcode: string): Observable<{ source: string; product: any }> {
+    return this.http.get<{ source: string; product: any }>(
+      `${this.url}/products/barcode-lookup/`,
+      { params: { barcode } },
+    );
+  }
+
   // ── Price Lists ──
   getPriceLists(): Observable<PaginatedResponse<PriceList>> {
     return this.http.get<PaginatedResponse<PriceList>>(`${this.url}/pricelists/`);
